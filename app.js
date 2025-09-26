@@ -74,11 +74,11 @@
       try {
         await saveSchemaToServer(schema, 'solution.json');
         lastSent = now; dirty = false;
-        setStatus('Auto-saved to solution.json');
+        setStatus('Changes saved');
       } catch (e) {
         // Ignore transient failures; we'll retry next tick
         console.error(e);
-        setStatus('Auto-save failed (will retry)');
+        setStatus('Save failed (will retry)');
       }
     }, 250); // check 4x per second; flush at >=1s since last send
 
@@ -460,6 +460,26 @@
       }
     })();
 
+    // --- Theme change detection ---
+    function setupThemeChangeListener() {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function handleThemeChange() {
+        // Re-render the diagram when theme changes to update table colors
+        if (schema) {
+          Diagram.renderSchema(svg, schema, selectedTableId, selectTable, selectColumn, selectedColId);
+        }
+      }
+
+      // Listen for theme changes
+      mediaQuery.addEventListener('change', handleThemeChange);
+
+      // Also listen for the older 'addListener' method for broader browser support
+      if (mediaQuery.addListener) {
+        mediaQuery.addListener(handleThemeChange);
+      }
+    }
+
     // --- boot
     (async function init() {
       try {
@@ -474,7 +494,7 @@
             } catch (err) {
                 console.warn('initial_state.json not found or failed to load. Starting empty.', err);
                 schema = makeEmptySchema('Untitled schema');
-                setStatus('No initial_state.json found. Starting with an empty schema.');
+                setStatus('Starting with a new schema');
             }
             } else {
             setStatus(`Loaded: ${schema.name}`);
@@ -489,6 +509,9 @@
         // Pass selection callbacks into dragging so renders keep handlers
         Diagram.enableDragging(svg, schema, save, () => selectedTableId, () => selectedColId, selectTable, selectColumn);
         Diagram.enablePanZoom(svg, () => { /* persist view? not necessary */ });
+
+        // Setup theme change detection
+        setupThemeChangeListener();
 
         // Pre-populate FK target selects
         UI.fillTables(fkToTable, schema);
