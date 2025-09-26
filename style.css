@@ -152,6 +152,8 @@
 
   /* Select field specific styles to match inputs */
   select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
     min-height: 3rem; /* Reduced from 3.75rem (20% reduction) */
     max-height: 8.737499999999999rem;
     padding-left: 1rem;
@@ -163,6 +165,11 @@
     background-repeat: no-repeat;
     background-position: right 0.75rem center; /* Position arrow with proper spacing */
     background-size: 1rem;
+  }
+
+  /* Hide IE/Edge dropdown arrow */
+  select::-ms-expand {
+    display: none;
   }
 
   input:not([type="checkbox"]):hover, select:hover {
