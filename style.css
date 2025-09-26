@@ -71,7 +71,7 @@
   }
 
   header{
-    display:flex;align-items:center;gap:1rem;padding:.5rem 1rem; /* Reduced from .75rem to .5rem */
+    display:flex;align-items:center;gap:1rem;padding:.45rem 1rem; /* Reduced from .75rem to .5rem */
     border-bottom:1px solid var(--stroke);
     background:var(--box)
   }
@@ -79,7 +79,7 @@
   /* Light theme navigation bar background */
   @media (prefers-color-scheme: light) {
     header {
-      background: #ffffff; /* Changed to white */
+      background: #ffffff;
     }
   }
   header h1{font-size:1.1rem;margin:0}
@@ -142,24 +142,24 @@
 
   /* Input field specific styles (exclude checkboxes) */
   input:not([type="checkbox"]) {
-    min-height: 3rem; /* Reduced from 3.75rem (20% reduction) */
+    min-height: 3rem;
     max-height: 8.737499999999999rem;
     padding-left: 1rem;
     padding-right: 2.75rem;
-    padding-top: 0.75rem; /* Reduced from 0.94975rem */
-    padding-bottom: 0.75rem; /* Reduced from 0.94975rem */
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
   }
 
   /* Select field specific styles to match inputs */
   select {
     -webkit-appearance: none;
     -moz-appearance: none;
-    min-height: 3rem; /* Reduced from 3.75rem (20% reduction) */
+    min-height: 3rem;
     max-height: 8.737499999999999rem;
     padding-left: 1rem;
-    padding-right: 3rem; /* Increased from 2.75rem to give arrow more space */
-    padding-top: 0.75rem; /* Reduced from 0.94975rem */
-    padding-bottom: 0.75rem; /* Reduced from 0.94975rem */
+    padding-right: 3rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
     appearance: none; /* Remove default arrow */
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
@@ -198,10 +198,8 @@
 
   /* Dark-mode specifics */
 @media (prefers-color-scheme: dark) {
-    /* 1) Sidebar "menus" (cards) should have no border in dark */
     .card { border: none; }
 
-    /* 2) Buttons should be dark with light-grey border */
     button {
       background: rgb(45 56 85 / 0.25);
       border-color: rgb(57 69 99);
@@ -213,7 +211,6 @@
       color: rgb(215 218 230);
     }
 
-    /* Update delete buttons to transparent red in dark mode */
     button.danger {
     background: rgba(239, 68, 68, 0.05);
     border-color: rgba(239, 68, 68, 0.6);
@@ -232,14 +229,12 @@
       color: rgb(215 218 230);
     }
 
-    /* 3) Inputs and selects dark with grey default (placeholder) text */
     input:not([type="checkbox"]), select {
       background: rgb(23 32 55);
       color: #c1c7d7;
       border-color: transparent;
     }
 
-    /* Dark mode dropdown arrow */
     select {
       background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c1c7d7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
       background-repeat: no-repeat;

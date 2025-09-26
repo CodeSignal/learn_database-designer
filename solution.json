@@ -1,105 +1,73 @@
 {
-  "version": "1.0",
-  "name": "ShopDB",
+  "name": "Untitled schema",
   "tables": [
     {
-      "id": "tbl_users",
+      "id": "tbl_users_5jfh90d",
       "name": "users",
       "columns": [
         {
-          "id": "u_id",
+          "id": "col_id_tp7z9eh",
           "name": "id",
           "type": "int",
-          "nullable": false,
-          "default": null
-        },
-        {
-          "id": "u_email",
-          "name": "email",
-          "type": "varchar(255)",
-          "nullable": false,
-          "default": null
-        },
-        {
-          "id": "u_name",
-          "name": "name",
-          "type": "varchar(255)",
           "nullable": false,
           "default": null
         }
       ],
       "primaryKey": [
-        "u_id"
+        "col_id_tp7z9eh"
       ],
       "uniqueConstraints": [
         {
-          "id": "uq_users_email",
+          "id": "uq_obntuki",
           "columns": [
-            "u_email"
+            "col_id_tp7z9eh"
           ]
         }
       ],
       "indexes": [],
       "position": {
-        "x": 603,
-        "y": 125
-      }
+        "x": 656,
+        "y": 133
+      },
+      "color": "white"
     },
     {
-      "id": "tbl_orders",
-      "name": "orders****",
+      "id": "tbl_wow_ntv1bum",
+      "name": "peep",
       "columns": [
         {
-          "id": "o_id",
+          "id": "col_id_w4l8ea5",
           "name": "id",
           "type": "int",
           "nullable": false,
           "default": null
         },
         {
-          "id": "o_user_id",
+          "id": "col_user_id_v0cqfey",
           "name": "user_id",
           "type": "int",
           "nullable": false,
           "default": null
-        },
-        {
-          "id": "o_total",
-          "name": "total",
-          "type": "decimal(10,2)",
-          "nullable": false,
-          "default": "0.00"
         }
       ],
       "primaryKey": [
-        "o_id"
+        "col_id_w4l8ea5"
       ],
-      "uniqueConstraints": [],
+      "uniqueConstraints": [
+        {
+          "id": "uq_54xxf1u",
+          "columns": [
+            "col_id_w4l8ea5"
+          ]
+        }
+      ],
       "indexes": [],
       "position": {
-        "x": 85,
-        "y": -102
+        "x": 304,
+        "y": 223
       },
-      "color": "blue"
+      "color": "red"
     }
   ],
-  "foreignKeys": [
-    {
-      "id": "fk_a1cw4cy",
-      "from": {
-        "table": "tbl_orders",
-        "columns": [
-          "o_user_id"
-        ]
-      },
-      "to": {
-        "table": "tbl_users",
-        "columns": [
-          "u_id"
-        ]
-      },
-      "onDelete": "NO ACTION",
-      "onUpdate": "NO ACTION"
-    }
-  ]
+  "foreignKeys": []
 }
