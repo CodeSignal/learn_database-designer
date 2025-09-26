@@ -4,19 +4,19 @@
 /* Put these with your other :root vars */
 :root {
     /* header fills (light) */
-    --tbl-white: #ffffff;
-    --tbl-blue:  #8eb3f0;
-    --tbl-green: #bbe5d1;
-    --tbl-red:   #f8caca;
+    --tbl-white: #f4f6f8;
+    --tbl-blue:  #8bd0f9;
+    --tbl-green: #b0f1a9;
+    --tbl-red:   #ff8595;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
       /* darker tints that read well with white text */
       --tbl-white: #4a5a7b; /* slate-ish */
-      --tbl-blue:  #0c2658; /* deep blue */
-      --tbl-green: #07402d; /* deep green */
-      --tbl-red:   #5d1d1d; /* deep red */
+      --tbl-blue:  #5252b7; /* iris */
+      --tbl-green: #419f65; /* shamrock green */
+      --tbl-red:   #df5353; /* deep red */
     }
   }
 
@@ -71,7 +71,7 @@
   }
 
   header{
-    display:flex;align-items:baseline;gap:1rem;padding:.75rem 1rem;
+    display:flex;align-items:center;gap:1rem;padding:.5rem 1rem; /* Reduced from .75rem to .5rem */
     border-bottom:1px solid var(--stroke);
     background:var(--box)
   }
@@ -79,13 +79,13 @@
   /* Light theme navigation bar background */
   @media (prefers-color-scheme: light) {
     header {
-      background: rgb(238, 239, 246);
+      background: #ffffff; /* Changed to white */
     }
   }
   header h1{font-size:1.1rem;margin:0}
   #status{font-size:.9rem;color:var(--muted)}
 
-  main.layout{display:grid;grid-template-columns:300px 1fr;height:calc(100% - 50px)}
+  main.layout{display:grid;grid-template-columns:300px 1fr;height:calc(100% - 42px)} /* Adjusted for smaller header */
   #diagram-wrap{width:100%;height:100%}
 
   #diagram{ background: var(--canvas); }
@@ -142,22 +142,34 @@
 
   /* Input field specific styles (exclude checkboxes) */
   input:not([type="checkbox"]) {
-    min-height: 3.75rem;
+    min-height: 3rem; /* Reduced from 3.75rem (20% reduction) */
     max-height: 8.737499999999999rem;
     padding-left: 1rem;
     padding-right: 2.75rem;
-    padding-top: 0.94975rem;
-    padding-bottom: 0.94975rem;
+    padding-top: 0.75rem; /* Reduced from 0.94975rem */
+    padding-bottom: 0.75rem; /* Reduced from 0.94975rem */
   }
 
   /* Select field specific styles to match inputs */
   select {
-    min-height: 3.75rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    min-height: 3rem; /* Reduced from 3.75rem (20% reduction) */
     max-height: 8.737499999999999rem;
     padding-left: 1rem;
-    padding-right: 2.75rem;
-    padding-top: 0.94975rem;
-    padding-bottom: 0.94975rem;
+    padding-right: 3rem; /* Increased from 2.75rem to give arrow more space */
+    padding-top: 0.75rem; /* Reduced from 0.94975rem */
+    padding-bottom: 0.75rem; /* Reduced from 0.94975rem */
+    appearance: none; /* Remove default arrow */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center; /* Position arrow with proper spacing */
+    background-size: 1rem;
+  }
+
+  /* Hide IE/Edge dropdown arrow */
+  select::-ms-expand {
+    display: none;
   }
 
   input:not([type="checkbox"]):hover, select:hover {
@@ -225,6 +237,16 @@
       background: rgb(23 32 55);
       color: #c1c7d7;
       border-color: transparent;
+    }
+
+    /* Dark mode dropdown arrow */
+    select {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c1c7d7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 1rem;
+      padding-left: 1rem; /* Ensure left padding is maintained in dark mode */
+      padding-right: 3rem; /* Ensure right padding is maintained in dark mode */
     }
 
     input:not([type="checkbox"]):hover, select:hover {
@@ -307,10 +329,11 @@
 
   /* --- help button alignment --- */
 .spacer { flex: 1; }
-#btn-help { margin-left: auto; }
+#btn-help { margin-left: auto; margin-top: 0; }
 
 .as-button {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: .5rem .75rem;
   border: 1px solid #e2e8f0;
   border-radius: .5rem;

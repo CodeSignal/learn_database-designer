@@ -99,7 +99,7 @@ function renderTable(svg, table, schema, selectedTableId, selectedColId, onSelec
   title.textContent = table.name; g.appendChild(title);
 
   // HEADER SEPARATOR
-  g.appendChild(createSvg('line', { x1: x, y1: y + DIAGRAM.HEADER_H, x2: x + width, y2: y + DIAGRAM.HEADER_H, stroke: '#e4e4e8' }));
+  g.appendChild(createSvg('line', { x1: x + 8, y1: y + DIAGRAM.HEADER_H, x2: x + width - 8, y2: y + DIAGRAM.HEADER_H, stroke: '#d1d5db', 'stroke-width': '0.5' }));
 
   // DRAG BUTTON (the ONLY drag handle)
   const btnSize = 16;

@@ -1,12 +1,12 @@
 # server.py (only the imports and do_POST change shown)
 from http.server import SimpleHTTPRequestHandler
 from socketserver import TCPServer
-from urllib.parse import urlparse, parse_qs   # ← add
+from urllib.parse import urlparse, parse_qs
 import json
 import os
 
 PORT = 3000
-ALLOWED_FILES = {"test.json", "solution.json"}  # ← add
+ALLOWED_FILES = {"test.json", "solution.json"}
 
 class Handler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):

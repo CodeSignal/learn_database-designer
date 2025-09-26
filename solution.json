@@ -77,9 +77,10 @@
       "uniqueConstraints": [],
       "indexes": [],
       "position": {
-        "x": 234,
-        "y": 109
-      }
+        "x": 85,
+        "y": -102
+      },
+      "color": "blue"
     }
   ],
   "foreignKeys": [
