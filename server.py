@@ -5,7 +5,7 @@ from urllib.parse import urlparse, parse_qs
 import json
 import os
 
-PORT = 8000
+PORT = 3000
 ALLOWED_FILES = {"test.json", "solution.json"}
 
 class Handler(SimpleHTTPRequestHandler):
