@@ -1,0 +1,29 @@
+name: Attach stable asset to release
+on:
+  release:
+    types: [published, edited]
+
+jobs:
+  upload-asset:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to upload assets
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # ensures tags/metadata are present
+
+
+      # Create a clean tarball with a top-level folder "designer/"
+      - name: Build tarball
+        run: |
+          mkdir -p out/designer
+          cp -r server.py app.js diagram.js help-content.html help-modal.js index.html io.js style.css ui.js out/designer/
+          tar -czf designer.tar.gz -C out designer
+
+      # Upload as the stable-named asset
+      - name: Upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: designer.tar.gz
+          overwrite: true
