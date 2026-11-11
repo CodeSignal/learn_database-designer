@@ -1,0 +1,26 @@
+{
+  "name": "database-designer",
+  "version": "0.0.1",
+  "description": "DB schema designer with a local development server",
+  "main": "server.js",
+  "scripts": {
+    "start": "npm run start:prod",
+    "start:prod": "IS_PRODUCTION=true node server.js",
+    "start:dev": "concurrently \"npm run dev:vite\" \"npm run dev:api\"",
+    "dev:vite": "vite",
+    "dev:api": "PORT=3001 node server.js",
+    "build": "vite build"
+  },
+  "keywords": [
+    "bespoke",
+    "database",
+    "development",
+    "server"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "vite": "^7.2.4"
+  }
+}

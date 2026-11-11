@@ -103,7 +103,7 @@ class HelpModal {
     if (this.isOpen) return;
 
     this.isOpen = true;
-    this.modal.style.display = 'block';
+    this.modal.style.display = 'flex';
     document.body.style.overflow = 'hidden'; // Prevent background scrolling
 
     // Focus management

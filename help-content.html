@@ -1,14 +1,14 @@
-<!-- Help content for the modal - extracted from help/index.html -->
+<!-- Help content for the modal (loaded by app.js when the Help button is clicked) -->
 <nav class="toc">
   <strong>Contents</strong>
   <ul>
     <li><a href="#overview">Overview</a></li>
-    <li><a href="#pan-zoom">Pan &amp; Zoom</a></li>
-    <li><a href="#moving-tables">Moving Tables</a></li>
-    <li><a href="#fields">Adding &amp; Editing Fields</a></li>
+    <li><a href="#canvas">Moving Around the Canvas</a></li>
+    <li><a href="#tables">Tables</a></li>
+    <li><a href="#fields">Fields</a></li>
     <li><a href="#keys">Primary &amp; Unique Keys</a></li>
     <li><a href="#foreign-keys">Foreign Keys</a></li>
-    <li><a href="#saving">Saving &amp; Loading</a></li>
+    <li><a href="#saving">Saving</a></li>
     <li><a href="#shortcuts">Shortcuts</a></li>
     <li><a href="#faq">Troubleshooting / FAQ</a></li>
   </ul>
@@ -16,90 +16,153 @@
 
 <section id="overview">
   <h2>Overview</h2>
-  <p>This page explains how to use the DB Schema Designer: create tables, add fields, set keys, connect tables, and save your work.</p>
-  <!-- Example hero image: drop files into help/img/ and link relatively -->
-  <!-- <img src="./img/overview.png" alt="Overview of the UI"> -->
-</section>
-
-<section id="pan-zoom">
-  <h2>Pan &amp; Zoom</h2>
+  <p>The DB Schema Designer lets you sketch a database schema: create tables, add fields, mark keys, and connect tables with foreign keys. Everything happens on the canvas; buttons appear next to whatever you select.</p>
   <ul>
-    <li>Use the mouse wheel to <em>zoom</em> in/out. The view zooms around your cursor.</li>
-    <li><strong>Drag the empty background</strong> to pan the canvas.</li>
+    <li>Click a <strong>table</strong> to select it. A toolbar appears above it.</li>
+    <li>Click a <strong>field</strong> to select it. Buttons appear at the end of its row.</li>
+    <li>Click the <strong>empty background</strong> to clear the selection.</li>
   </ul>
-  <!-- <img src="./img/pan-zoom.gif" alt="Pan and zoom demonstration"> -->
 </section>
 
-<section id="moving-tables">
-  <h2>Moving Tables</h2>
-  <p>Grab the dotted handle in the table header to drag a table.</p>
-  <!-- <img src="./img/drag-handle.png" alt="The drag handle on a table"> -->
+<section id="canvas">
+  <h2>Moving Around the Canvas</h2>
+  <ul>
+    <li><strong>Zoom:</strong> use the mouse wheel or trackpad scroll. The view zooms around your cursor.</li>
+    <li><strong>Pan:</strong> drag the empty background.</li>
+    <li><strong>Move a table:</strong> drag the dotted handle at the right of the table header. This is the only place you can drag a table from.</li>
+  </ul>
+</section>
+
+<section id="tables">
+  <h2>Tables</h2>
+  <h3>Create a table</h3>
+  <ol>
+    <li>Click the <strong>+</strong> button in the top-left corner of the canvas.</li>
+    <li>Enter a table name and pick a starting color.</li>
+    <li>Click <em>Create Table</em> or press Enter.</li>
+  </ol>
+  <p>The new table is placed in the first free spot on the canvas. If the name is already used, a number is added (for example <code>users_1</code>).</p>
+
+  <h3>Edit a selected table</h3>
+  <p>Click a table to show its toolbar:</p>
+  <ul>
+    <li><strong>Color swatches</strong> (white, blue, green, red) – click one to recolor the table header. The current color is circled.</li>
+    <li><strong>Pencil</strong> – opens a pop-up where you can rename the table and change its color. Names must be unique.</li>
+    <li><strong>Trash</strong> – deletes the table after you confirm. Any foreign keys from or to the table are removed too.</li>
+  </ul>
 </section>
 
 <section id="fields">
-  <h2>Adding &amp; Editing Fields</h2>
+  <h2>Fields</h2>
+  <h3>Add a field</h3>
   <ol>
-    <li>Select a table from the diagram.</li>
-    <li>Use the <em>Add Field</em> form in the sidebar: name, type, nullable/default, primary/unique.</li>
-    <li>Click a field in the diagram to edit it again.</li>
+    <li>Click <em>+ Add field</em> at the bottom of a table.</li>
+    <li>Fill in the pop-up:
+      <ul>
+        <li><strong>Column name</strong> (required)</li>
+        <li><strong>Type</strong>: <code>int</code>, <code>bigint</code>, <code>decimal(10,2)</code>, <code>varchar(255)</code>, <code>text</code>, <code>date</code>, <code>timestamp</code> or <code>boolean</code></li>
+        <li><strong>Nullable</strong> – whether the field may be empty</li>
+        <li><strong>Default</strong> – optional default value</li>
+        <li><strong>Primary key</strong> and <strong>Unique</strong> (see below)</li>
+      </ul>
+    </li>
+    <li>Click <em>Add Field</em> or press Enter.</li>
   </ol>
-  <!-- <img src="./img/add-field.png" alt="Adding a field"> -->
+  <p>If a field with the same name already exists in the table, a number is added to the new name.</p>
+
+  <h3>Edit or delete a field</h3>
+  <p>Click a field to select it. Its row is highlighted and three buttons appear:</p>
+  <ul>
+    <li><strong>Link</strong> – set up a foreign key for this field (see <a href="#foreign-keys">Foreign Keys</a>).</li>
+    <li><strong>Pencil</strong> – edit the field in the same pop-up used to add it.</li>
+    <li><strong>Trash</strong> – delete the field after you confirm. Its keys and any foreign keys from or to it are removed too.</li>
+  </ul>
+  <p>Each field is shown as <code>name: type</code>, followed by <code>NOT NULL</code> when the field isn't nullable.</p>
 </section>
 
 <section id="keys">
   <h2>Primary &amp; Unique Keys</h2>
-  <p>Mark a field as <strong>Primary key</strong> or <strong>Unique</strong> in the field form. Primary keys are shown with a key icon.</p>
+  <ul>
+    <li>Tick <strong>Primary key</strong> in the field pop-up to make the field part of the table's primary key. Primary key fields are always <code>NOT NULL</code> and are marked with 🔑.</li>
+    <li>Tick <strong>Unique</strong> to add a unique constraint on that single field.</li>
+  </ul>
 </section>
 
 <section id="foreign-keys">
   <h2>Foreign Keys</h2>
+  <h3>Add a foreign key</h3>
   <ol>
-    <li>Choose the <em>From column</em>, <em>To table</em>, and <em>To column</em>.</li>
-    <li>Pick an <em>On Delete</em> action (e.g., CASCADE).</li>
-    <li>Click <em>Add FK</em>. Arrows will appear between related tables.</li>
+    <li>Click the field the key starts from (for example <code>orders.user_id</code>).</li>
+    <li>Click its <strong>link</strong> button.</li>
+    <li>Choose the <em>To table</em> and <em>To column</em> it refers to. The pop-up suggests another table and its primary key.</li>
+    <li>Pick an <em>On Delete</em> action: <code>NO ACTION</code>, <code>CASCADE</code>, <code>SET NULL</code> or <code>RESTRICT</code>.</li>
+    <li>Click <em>Add FK</em>.</li>
   </ol>
-  <p>To remove an FK for a field, select the field and use the <em>Remove</em> option (status text will confirm).</p>
-  <!-- <img src="./img/add-fk.png" alt="Adding a foreign key"> -->
+  <p>An arrow is drawn from the field to the column it refers to, and both fields are marked with 🔗.</p>
+
+  <h3>Change or remove a foreign key</h3>
+  <p>Select the field and click its link button again. The pop-up shows the field's foreign keys in the <em>Key</em> list. Pick one, change its settings and click <em>Save FK</em>, or click <em>Remove FK</em> to delete just that key. Choose <em>+ New foreign key</em> to add another one. Other keys on the field are never changed.</p>
+
+  <h3>How arrows are drawn</h3>
+  <p>Arrows pick the sides of the tables automatically, so you can arrange tables however you like:</p>
+  <ul>
+    <li>If the target table is to the right, the arrow goes from the right side of the source to the left side of the target, and the other way round when it's to the left.</li>
+    <li>If one table is above the other, the arrow leaves and enters on the same side and curves around the tables.</li>
+    <li>A table that refers to itself (for example <code>employees.manager_id → employees.id</code>) gets a small loop on its right side.</li>
+  </ul>
+  <p>Arrows update as you drag tables around.</p>
 </section>
 
 <section id="saving">
-  <h2>Saving &amp; Loading</h2>
-  <ul>
-    <li><strong>Save solution</strong> – saves your schema to the server endpoint the app is configured with.</li>
-    <li>Local autosave may also use <code>localStorage</code> when enabled.</li>
-  </ul>
+  <h2>Saving</h2>
+  <p>Your work is saved automatically as you go, so you don't need to save anything yourself.</p>
+  <p>Your solution is saved locally so that Cosmo can evaluate it. It will be deleted if you reset the session, or if the session resets because you've been inactive for too long.</p>
 </section>
 
 <section id="shortcuts">
   <h2>Shortcuts</h2>
   <ul>
-    <li><strong>ESC</strong> - Close help modal</li>
-    <li><strong>Mouse wheel</strong> - Zoom in/out</li>
-    <li><strong>Drag background</strong> - Pan canvas</li>
-    <li><strong>Click table</strong> - Select table</li>
-    <li><strong>Click field</strong> - Edit field</li>
+    <li><strong>Enter</strong> – confirm the pop-up while typing in a text box (name, default)</li>
+    <li><strong>Esc</strong> – close the open pop-up or this help window without changes</li>
+    <li><strong>Mouse wheel</strong> – zoom in/out</li>
+    <li><strong>Drag background</strong> – pan the canvas</li>
+    <li><strong>Drag the dotted handle</strong> – move a table</li>
+    <li><strong>Click table / field</strong> – select it</li>
+    <li><strong>Click background</strong> – clear the selection</li>
+    <li><strong>Tab / Shift+Tab</strong> – move between tables, fields and their buttons</li>
+    <li><strong>Enter or Space</strong> – select the focused table or field, or press the focused button</li>
   </ul>
 </section>
 
 <section id="faq">
   <h2>Troubleshooting / FAQ</h2>
   <details>
+    <summary>I can't see the buttons for a field</summary>
+    <p>The link, pencil and trash buttons only appear on the selected field. Click the field's text inside the table to select it.</p>
+  </details>
+
+  <details>
+    <summary>How do I rename a table?</summary>
+    <p>Click the table, then click the pencil button in the toolbar above it.</p>
+  </details>
+
+  <details>
     <summary>How do I delete a table?</summary>
-    <p>Select the table and click the "Delete" button in the sidebar. This will also remove any foreign keys connected to the table.</p>
+    <p>Click the table, then click the trash button in the toolbar above it. This also removes any foreign keys connected to the table.</p>
   </details>
 
   <details>
-    <summary>Can I change the color of tables?</summary>
-    <p>Yes! Select a table and use the "Table color" dropdown in the sidebar to choose from white, blue, green, or red.</p>
+    <summary>I can't drag a table</summary>
+    <p>Tables can only be dragged by the dotted handle at the right of their header. Dragging anywhere else on the canvas pans the view.</p>
   </details>
 
   <details>
-    <summary>How do I add images to the help?</summary>
-    <p>Place image files in the <code>help/img/</code> directory and reference them with relative paths like <code>&lt;img src="./img/example.png" alt="Description"&gt;</code></p>
+    <summary>A new table doesn't appear</summary>
+    <p>New tables are placed in the first free spot from the top-left of the diagram. If you have panned or zoomed far away, drag the background back towards the top-left to find it.</p>
   </details>
 
   <details>
-    <summary>Is my work automatically saved?</summary>
-    <p>Yes, the app automatically saves your schema every second to both localStorage and the server. You'll see "Auto-saved" status messages.</p>
+    <summary>Is my work saved automatically?</summary>
+    <p>Yes, every change is saved as you make it. Resetting the session, or being inactive long enough for it to reset, deletes your solution. See <a href="#saving">Saving</a>.</p>
   </details>
 </section>
