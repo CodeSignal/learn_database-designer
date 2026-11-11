@@ -1,102 +1,218 @@
 {
-  "version": "1.0",
-  "name": "ShopDB",
+  "name": "Untitled schema",
   "tables": [
     {
-      "id": "tbl_users",
-      "name": "users",
+      "id": "tbl_Author_31ppzkw",
+      "name": "Author",
       "columns": [
         {
-          "id": "u_id",
+          "id": "col_id_myt3ph3",
           "name": "id",
           "type": "int",
           "nullable": false,
           "default": null
         },
         {
-          "id": "u_email",
-          "name": "email",
-          "type": "varchar(255)",
-          "nullable": false,
-          "default": null
-        },
-        {
-          "id": "u_name",
+          "id": "col_name_i9cdx2t",
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "id": "col_place_mlvs6cy",
+          "name": "place",
+          "type": "int",
           "nullable": false,
           "default": null
         }
       ],
       "primaryKey": [
-        "u_id"
-      ],
-      "uniqueConstraints": [
-        {
-          "id": "uq_users_email",
-          "columns": [
-            "u_email"
-          ]
-        }
-      ],
-      "indexes": [],
-      "position": {
-        "x": 500,
-        "y": 6
-      },
-      "color": "green"
-    },
-    {
-      "id": "tbl_orders",
-      "name": "orders****",
-      "columns": [
-        {
-          "id": "o_id",
-          "name": "id",
-          "type": "int",
-          "nullable": false,
-          "default": null
-        },
-        {
-          "id": "o_user_id",
-          "name": "user_id",
-          "type": "int",
-          "nullable": false,
-          "default": null
-        },
-        {
-          "id": "o_total",
-          "name": "total",
-          "type": "decimal(10,2)",
-          "nullable": false,
-          "default": "0.00"
-        }
-      ],
-      "primaryKey": [
-        "o_id"
+        "col_id_myt3ph3"
       ],
       "uniqueConstraints": [],
       "indexes": [],
       "position": {
-        "x": 198,
-        "y": -33
+        "x": 610,
+        "y": 615
       },
       "color": "red"
+    },
+    {
+      "id": "tbl_Book_5kb4f8e",
+      "name": "Book",
+      "columns": [
+        {
+          "id": "col_id_ystvpaf",
+          "name": "id",
+          "type": "int",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "id": "col_title_m74arpp",
+          "name": "title",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "id": "col_pages_c0lifgo",
+          "name": "pages",
+          "type": "int",
+          "nullable": true,
+          "default": "0"
+        },
+        {
+          "id": "col_a_id_8af5cqx",
+          "name": "a_id",
+          "type": "int",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "id": "col_place_written_23iqrn7",
+          "name": "place_written",
+          "type": "int",
+          "nullable": false,
+          "default": null
+        }
+      ],
+      "primaryKey": [
+        "col_id_ystvpaf"
+      ],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "position": {
+        "x": 319,
+        "y": 327
+      },
+      "color": "green"
+    },
+    {
+      "id": "tbl_Country_78xgaiq",
+      "name": "Country",
+      "columns": [
+        {
+          "id": "col_id_o3sl194",
+          "name": "id",
+          "type": "int",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "id": "col_name_2qedyj8",
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "default": null
+        }
+      ],
+      "primaryKey": [
+        "col_id_o3sl194"
+      ],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "position": {
+        "x": -57,
+        "y": 514
+      },
+      "color": "red"
+    },
+    {
+      "id": "tbl_User_zvrjzre",
+      "name": "User",
+      "columns": [
+        {
+          "id": "col_id_refvt4r",
+          "name": "id",
+          "type": "int",
+          "nullable": false,
+          "default": null
+        }
+      ],
+      "primaryKey": [
+        "col_id_refvt4r"
+      ],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "position": {
+        "x": 495,
+        "y": 77
+      },
+      "color": "white"
+    },
+    {
+      "id": "tbl_table_g1ydf8k",
+      "name": "table",
+      "columns": [
+        {
+          "id": "col_id_z5t8b5p",
+          "name": "id",
+          "type": "int",
+          "nullable": false,
+          "default": null
+        }
+      ],
+      "primaryKey": [
+        "col_id_z5t8b5p"
+      ],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "position": {
+        "x": 924,
+        "y": 433
+      },
+      "color": "green"
     }
   ],
   "foreignKeys": [
     {
-      "id": "fk_a1cw4cy",
+      "id": "fk_5n89cle",
       "from": {
-        "table": "tbl_orders",
+        "table": "tbl_Book_5kb4f8e",
         "columns": [
-          "o_user_id"
+          "col_a_id_8af5cqx"
         ]
       },
       "to": {
-        "table": "tbl_users",
+        "table": "tbl_Author_31ppzkw",
         "columns": [
-          "u_id"
+          "col_id_myt3ph3"
+        ]
+      },
+      "onDelete": "NO ACTION",
+      "onUpdate": "NO ACTION"
+    },
+    {
+      "id": "fk_6j0t8w8",
+      "from": {
+        "table": "tbl_Author_31ppzkw",
+        "columns": [
+          "col_place_mlvs6cy"
+        ]
+      },
+      "to": {
+        "table": "tbl_Country_78xgaiq",
+        "columns": [
+          "col_id_o3sl194"
+        ]
+      },
+      "onDelete": "NO ACTION",
+      "onUpdate": "NO ACTION"
+    },
+    {
+      "id": "fk_cqxhueh",
+      "from": {
+        "table": "tbl_Book_5kb4f8e",
+        "columns": [
+          "col_place_written_23iqrn7"
+        ]
+      },
+      "to": {
+        "table": "tbl_Country_78xgaiq",
+        "columns": [
+          "col_id_o3sl194"
         ]
       },
       "onDelete": "NO ACTION",

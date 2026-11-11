@@ -3,40 +3,10 @@
     const status = document.getElementById('status');
     const svg = document.getElementById('diagram');
 
-    // Hide any existing "Save solution" buttons in the host page (header or sidebar),
+    // Hide any existing "Save solution" buttons in the host page,
     // since saves are automatic now.
     const headerSaveBtn = document.getElementById('btn-save-solution');
     if (headerSaveBtn) headerSaveBtn.style.display = 'none';
-
-    // sidebar controls
-    const sectionSelected = document.getElementById('section-selected');
-    const selTitle = document.getElementById('sel-title');
-    const btnDelTable = document.getElementById('btn-del-table');
-
-    const fNewTable = document.getElementById('form-new-table');
-    const ntName = document.getElementById('nt-name');
-
-    const fRename = document.getElementById('form-rename-table');
-    const rtName = document.getElementById('rt-name');
-    const rtColor = document.getElementById('rt-color');
-
-    const fNewCol = document.getElementById('form-new-col');
-    const ncName = document.getElementById('nc-name');
-    const ncType = document.getElementById('nc-type');
-    const ncNullable = document.getElementById('nc-nullable');
-    const ncDefault = document.getElementById('nc-default');
-    const ncPK = document.getElementById('nc-pk');
-    const ncUnique = document.getElementById('nc-unique');
-
-    const fNewFK = document.getElementById('form-new-fk');
-    const fkFromCol = document.getElementById('fk-from-col');
-    const fkToTable = document.getElementById('fk-to-table');
-    const fkToCol = document.getElementById('fk-to-col');
-    const fkOnDelete = document.getElementById('fk-ondelete');
-
-    const fieldFormTitle = document.getElementById('field-form-title');
-
-    UI.fillTypeOptions(ncType);
 
     let schema = null;
     let selectedTableId = null;
@@ -83,94 +53,25 @@
     }, 250); // check 4x per second; flush at >=1s since last send
 
     /* --------------------------------
-       Selection & UI
+       Selection
        -------------------------------- */
-    function selectTable(id) {
-      selectedTableId = id;
-      selectedColId = null; // clear column selection
-      const t = schema.tables.find(x => x.id === id);
-      if (t) {
-        sectionSelected.hidden = false;
-        selTitle.textContent = `Selected: ${t.name}`;
-        rtName.value = t.name;
-        rtColor.value = t.color || 'white';
-
-        // update FK dropdowns
-        UI.fillColumns(fkFromCol, t);
-        UI.fillTables(fkToTable, schema);
-        const toTable = schema.tables.find(x => x.id === fkToTable.value) || schema.tables[0];
-        fillToCols(toTable);
-      } else {
-        sectionSelected.hidden = true;
-      }
-      // Reset form title back to "Add Field" when table is (re)selected
-      fieldFormTitle.textContent = 'Add Field';
-
-      // clear FK status row in field form when switching tables
-      fkStatusText.textContent = '';
-      btnRemoveFK.hidden = true;
-
+    function render() {
       Diagram.renderSchema(svg, schema, selectedTableId, selectTable, selectColumn, selectedColId);
+    }
+
+    function selectTable(id) {
+      selectedTableId = schema.tables.some(t => t.id === id) ? id : null;
+      selectedColId = null;
+      render();
     }
 
     function selectColumn(tableId, colId) {
-      if (!tableId || !colId) return;
+      const t = schema.tables.find(x => x.id === tableId);
+      if (!t || !t.columns.some(c => c.id === colId)) return;
       selectedTableId = tableId;
       selectedColId = colId;
-      const t = schema.tables.find(x => x.id === tableId);
-      const c = t?.columns.find(x => x.id === colId);
-      if (!t || !c) return;
-      // ensure correct table is selected in UI and FK lists
-      UI.fillColumns(fkFromCol, t);
-      UI.fillTables(fkToTable, schema);
-      const toTable = schema.tables.find(x => x.id === fkToTable.value) || schema.tables[0];
-      fillToCols(toTable);
-
-      // Load values into the "Add Field" form to EDIT
-      ncName.value = c.name;
-      ncType.value = UI.TYPES.includes(c.type) ? c.type : UI.TYPES[0];
-      ncNullable.checked = !!c.nullable;
-      ncDefault.value = c.default ?? '';
-      ncPK.checked = (t.primaryKey || []).includes(c.id);
-      ncUnique.checked = !!(t.uniqueConstraints || []).some(uq => (uq.columns || []).includes(c.id));
-      // Switch buttons to edit mode label
-      btnAddOrUpdateCol.textContent = 'Save Field';
-      btnDeleteCol.removeAttribute('hidden');
-
-      // Update titles
-      selTitle.textContent = `Selected: ${t.name}`;
-      fieldFormTitle.textContent = `Editing “${c.name}” field`;
-
-      // Initialize color selector when entering via column edit too
-      rtColor.value = t.color || 'white';
-
-      // Show outgoing FK status (if any) for this column
-      const outgoingFK = (schema.foreignKeys || []).find(fk =>
-        fk.from.table === t.id && fk.from.columns.includes(c.id)
-      );
-      if (outgoingFK) {
-        const toTbl = schema.tables.find(tt => tt.id === outgoingFK.to.table);
-        const toCol = toTbl?.columns.find(cc => cc.id === outgoingFK.to.columns[0]);
-        const toLabel = toTbl && toCol ? `${toTbl.name}.${toCol.name}` : '(unknown)';
-        fkStatusText.textContent = `FK → ${toLabel}`;
-        btnRemoveFK.hidden = false;
-      } else {
-        fkStatusText.textContent = '';
-        btnRemoveFK.hidden = true;
-      }
-
-      Diagram.renderSchema(svg, schema, selectedTableId, selectTable, selectColumn, selectedColId);
+      render();
     }
-
-    function fillToCols(table) {
-      UI.fillColumns(fkToCol, table);
-    }
-
-    // change target columns list when table changes
-    fkToTable.addEventListener('change', () => {
-      const t = schema.tables.find(x => x.id === fkToTable.value);
-      fillToCols(t);
-    });
 
     // --- CRUD Ops
     function ensureUniqueTableName(name) {
@@ -179,7 +80,11 @@
       return nm;
     }
 
-    function addTable(name) {
+    function normalizeColor(colorKey) {
+      return UI.TABLE_COLOR_KEYS.includes(colorKey) ? colorKey : 'white';
+    }
+
+    function addTable(name, color = 'white') {
       const clean = name.trim();
       if (!clean) return;
       const uniqueName = ensureUniqueTableName(clean);
@@ -190,30 +95,28 @@
         primaryKey: [],
         uniqueConstraints: [],
         indexes: [],
-        position: { x: 80 + 40 * schema.tables.length, y: 80 + 40 * schema.tables.length },
-        color: 'white' // default color
+        position: Diagram.findFreePosition(schema),
+        color: normalizeColor(color)
       };
       schema.tables.push(t);
       save(); setStatus(`Added table "${uniqueName}"`);
       selectTable(t.id);
     }
 
-    function renameTable(id, newName) {
+    function updateTable(id, { name, color }) {
       const t = schema.tables.find(x => x.id === id); if (!t) return;
-      const clean = newName.trim(); if (!clean) return;
-      if (schema.tables.some(x => x.id !== id && x.name === clean)) {
-        setStatus('Name already used'); return;
-      }
-      t.name = clean; save(); selectTable(id);
+      const clean = name.trim(); if (!clean) return;
+      t.name = clean;
+      t.color = normalizeColor(color);
+      save(); setStatus(`Saved table "${clean}"`);
+      selectTable(id);
     }
 
     function setTableColor(id, colorKey) {
       const t = schema.tables.find(x => x.id === id); if (!t) return;
-      // guard against unknown values
-      const allowed = new Set(['white','blue','green','red']);
-      t.color = allowed.has(colorKey) ? colorKey : 'white';
+      t.color = normalizeColor(colorKey);
       save();
-      Diagram.renderSchema(svg, schema, selectedTableId, selectTable, selectColumn, selectedColId);
+      render();
     }
 
     function deleteTable(id) {
@@ -224,8 +127,8 @@
         fk.from.table !== table.id && fk.to.table !== table.id
       );
       schema.tables.splice(idx, 1);
-      if (selectedTableId === id) { selectedTableId = null; selectedColId = null; }
-      save(); setStatus('Table deleted'); selectTable(selectedTableId);
+      save(); setStatus('Table deleted');
+      selectTable(null);
     }
 
     function addColumn(tableId, { name, type, nullable, def, pk, unique }) {
@@ -293,22 +196,25 @@
         !(fk.to.table === tableId && fk.to.columns.includes(colId))
       );
       t.columns.splice(idx, 1);
-      selectedColId = null;
       save(); selectTable(tableId);
     }
 
-    function addForeignKey(fromTableId, fromColId, toTableId, toColId, onDelete) {
-      schema.foreignKeys = schema.foreignKeys || [];
+    // replace the field's outgoing FK (if any) with a new one, keeping the field selected
+    function setForeignKeyForField(fromTableId, fromColId, toTableId, toColId, onDelete) {
+      schema.foreignKeys = (schema.foreignKeys || []).filter(fk =>
+        !(fk.from.table === fromTableId && fk.from.columns.includes(fromColId))
+      );
       schema.foreignKeys.push({
         id: fkId(),
         from: { table: fromTableId, columns: [fromColId] },
         to: { table: toTableId, columns: [toColId] },
         onDelete, onUpdate: 'NO ACTION'
       });
-      save(); selectTable(fromTableId);
+      save(); setStatus('Foreign key saved');
+      selectColumn(fromTableId, fromColId);
     }
 
-    // helper to remove outgoing FK(s) from a specific field
+    // remove outgoing FK(s) from a specific field
     function removeForeignKeyForField(fromTableId, fromColId) {
       if (!schema?.foreignKeys) return;
       const before = schema.foreignKeys.length;
@@ -322,134 +228,204 @@
       } else {
         setStatus('No foreign key to remove for this field');
       }
-      // stay in edit mode for this column so the user sees the result
       selectColumn(fromTableId, fromColId);
     }
 
-    // --- Wire UI (tables)
-    fNewTable.addEventListener('submit', (e) => {
-      e.preventDefault(); addTable(ntName.value); ntName.value = '';
-    });
+    // click empty canvas to clear selection
+    svg.addEventListener('click', () => selectTable(null));
 
-    fRename.addEventListener('submit', (e) => {
-      e.preventDefault(); if (!selectedTableId) return; renameTable(selectedTableId, rtName.value);
-    });
-
-    // color change handler
-    rtColor.addEventListener('change', () => {
-      if (!selectedTableId) return;
-      setTableColor(selectedTableId, rtColor.value);
-    });
-
-    btnDelTable.addEventListener('click', () => {
-      if (!selectedTableId) return;
-      if (confirm('Delete this table? This will also remove related foreign keys.')) deleteTable(selectedTableId);
-    });
-
-    // --- FIELD form: we’ll dynamically add an "Update/Delete" UX without changing HTML
-    const btnRow = document.createElement('div');
-    btnRow.className = 'row';
-    const btnAddOrUpdateCol = document.createElement('button');
-    btnAddOrUpdateCol.type = 'submit';
-    btnAddOrUpdateCol.textContent = 'Add Field'; // flips to "Save Field" in edit mode
-    const btnDeleteCol = document.createElement('button');
-    btnDeleteCol.type = 'button';
-    btnDeleteCol.className = 'danger';
-    btnDeleteCol.textContent = 'Delete Field';
-    btnDeleteCol.hidden = true; // only visible when editing
-    btnRow.appendChild(btnAddOrUpdateCol);
-    btnRow.appendChild(btnDeleteCol);
-    fNewCol.appendChild(btnRow);
-
-    /* NEW: FK status + remove button (only visible when the selected column has an outgoing FK) */
-    const fkStatusWrap = document.createElement('div');
-    fkStatusWrap.className = 'row-between';
-    fkStatusWrap.style.marginTop = '.25rem';
-
-    const fkStatusText = document.createElement('div');
-    fkStatusText.id = 'fk-status-text';
-    fkStatusText.style.fontSize = '.9rem';
-    fkStatusText.style.color = 'var(--muted)';
-    fkStatusText.textContent = '';
-
-    const btnRemoveFK = document.createElement('button');
-    btnRemoveFK.type = 'button';
-    btnRemoveFK.className = 'danger';
-    btnRemoveFK.textContent = 'Remove FK';
-    btnRemoveFK.hidden = true;
-
-    fkStatusWrap.appendChild(fkStatusText);
-    fkStatusWrap.appendChild(btnRemoveFK);
-    fNewCol.appendChild(fkStatusWrap);
-
-    fNewCol.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!selectedTableId) return;
-      const data = {
-        name: ncName.value,
-        type: ncType.value,
-        nullable: ncNullable.checked,
-        def: (ncDefault.value || '').trim() || null,
-        pk: ncPK.checked,
-        unique: ncUnique.checked
-      };
-      if (selectedColId) {
-        updateColumn(selectedTableId, selectedColId, data);
-      } else {
-        addColumn(selectedTableId, data);
-      }
-      // reset a bit (back to "add" mode)
-      clearFieldForm();
-    });
-
-    btnDeleteCol.addEventListener('click', () => {
-      if (!selectedTableId || !selectedColId) return;
-      if (confirm('Delete this field? This also removes related constraints/keys.')) {
-        deleteColumn(selectedTableId, selectedColId);
-        clearFieldForm();
-      }
-    });
-
-    // remove-FK handler
-    btnRemoveFK.addEventListener('click', () => {
-      if (!selectedTableId || !selectedColId) return;
-      if (confirm('Remove the foreign key from this field?')) {
-        removeForeignKeyForField(selectedTableId, selectedColId);
-      }
-    });
-
-    function clearFieldForm() {
-      selectedColId = null;
-      ncName.value = '';
-      ncPK.checked = false; ncUnique.checked = false; ncNullable.checked = false; ncDefault.value = '';
-      btnAddOrUpdateCol.textContent = 'Add Field';
-      btnDeleteCol.hidden = true;
-      fieldFormTitle.textContent = 'Add Field';
-      // clear FK status UI
-      fkStatusText.textContent = '';
-      btnRemoveFK.hidden = true;
-      // Re-render to drop highlight on previously edited column
-      Diagram.renderSchema(svg, schema, selectedTableId, selectTable, selectColumn, selectedColId);
+    function wireDialogClose(dialog, cancelBtn, onClose) {
+      cancelBtn.addEventListener('click', () => dialog.close());
+      // clicking the backdrop (the dialog element itself, outside the form) closes it
+      dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+      dialog.addEventListener('close', onClose);
     }
 
-    // --- FK form
-    fNewFK.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!selectedTableId) return;
-      const fromCol = fkFromCol.value;
-      const toTbl = fkToTable.value;
-      const toCol = fkToCol.value;
-      if (!fromCol || !toTbl || !toCol) return;
-      addForeignKey(selectedTableId, fromCol, toTbl, toCol, fkOnDelete.value || 'NO ACTION');
-    });
+    // --- Table pop-up (create from the canvas corner button, or edit from the table toolbar)
+    const tableDialog = document.getElementById('table-dialog');
+    const tdForm = document.getElementById('table-dialog-form');
+    const tdTitle = document.getElementById('td-title');
+    const tdName = document.getElementById('td-name');
+    const tdSubmit = document.getElementById('td-submit');
 
-    // click empty canvas to clear selection (and exit column edit mode)
-    svg.addEventListener('click', () => { selectTable(null); clearFieldForm(); });
+    let tableDialogTarget = null; // table id when editing, null when creating
+
+    function openTableDialog(editTableId = null) {
+      const t = editTableId ? schema.tables.find(x => x.id === editTableId) : null;
+      tableDialogTarget = t ? t.id : null;
+      tdForm.reset();
+      tdName.setCustomValidity('');
+      tdTitle.textContent = t ? `Edit table “${t.name}”` : 'New table';
+      tdSubmit.textContent = t ? 'Save Table' : 'Create Table';
+      if (t) {
+        tdName.value = t.name;
+        const radio = tdForm.querySelector(`input[name="td-color"][value="${normalizeColor(t.color)}"]`);
+        if (radio) radio.checked = true;
+      }
+      tableDialog.showModal();
+      tdName.focus();
+    }
+
+    document.getElementById('btn-new-table').addEventListener('click', () => openTableDialog());
+    tdName.addEventListener('input', () => tdName.setCustomValidity(''));
+    tdForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const color = tdForm.querySelector('input[name="td-color"]:checked')?.value || 'white';
+      const editId = tableDialogTarget;
+      if (editId) {
+        const clean = tdName.value.trim();
+        if (schema.tables.some(x => x.id !== editId && x.name === clean)) {
+          tdName.setCustomValidity('A table with this name already exists');
+          tdName.reportValidity();
+          return;
+        }
+        tableDialog.close();
+        updateTable(editId, { name: clean, color });
+      } else {
+        tableDialog.close();
+        addTable(tdName.value, color);
+      }
+    });
+    wireDialogClose(tableDialog, document.getElementById('td-cancel'), () => { tableDialogTarget = null; });
+
+    // --- Field pop-up (add/edit a field from the diagram)
+    const fieldDialog = document.getElementById('field-dialog');
+    const fdForm = document.getElementById('field-dialog-form');
+    const fdTitle = document.getElementById('fd-title');
+    const fdName = document.getElementById('fd-name');
+    const fdType = document.getElementById('fd-type');
+    const fdNullable = document.getElementById('fd-nullable');
+    const fdDefault = document.getElementById('fd-default');
+    const fdPK = document.getElementById('fd-pk');
+    const fdUnique = document.getElementById('fd-unique');
+    const fdSubmit = document.getElementById('fd-submit');
+    const fdCancel = document.getElementById('fd-cancel');
+    UI.fillTypeOptions(fdType);
+
+    let fieldDialogTarget = null; // { tableId, colId } — colId is null when adding
+
+    function openFieldDialog(tableId, editColId = null) {
+      const t = schema.tables.find(x => x.id === tableId); if (!t) return;
+      const c = editColId ? t.columns.find(x => x.id === editColId) : null;
+      fieldDialogTarget = { tableId, colId: c ? c.id : null };
+      fdTitle.textContent = c ? `Edit “${c.name}” in ${t.name}` : `Add field to ${t.name}`;
+      fdSubmit.textContent = c ? 'Save Field' : 'Add Field';
+      fdName.value = c?.name ?? '';
+      fdType.value = c && UI.TYPES.includes(c.type) ? c.type : UI.TYPES[0];
+      fdNullable.checked = !!c?.nullable;
+      fdDefault.value = c?.default ?? '';
+      fdPK.checked = !!c && (t.primaryKey || []).includes(c.id);
+      fdUnique.checked = !!c && (t.uniqueConstraints || []).some(uq => (uq.columns || []).includes(c.id));
+      fieldDialog.showModal();
+      fdName.focus();
+    }
+
+    fdForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!fieldDialogTarget) return;
+      const { tableId, colId: editColId } = fieldDialogTarget;
+      const data = {
+        name: fdName.value,
+        type: fdType.value,
+        nullable: fdNullable.checked,
+        def: (fdDefault.value || '').trim() || null,
+        pk: fdPK.checked,
+        unique: fdUnique.checked
+      };
+      fieldDialog.close();
+      if (editColId) updateColumn(tableId, editColId, data);
+      else addColumn(tableId, data);
+    });
+    wireDialogClose(fieldDialog, fdCancel, () => { fieldDialogTarget = null; });
+
+    // --- Foreign key pop-up (set/change/remove the selected field's FK)
+    const fkDialog = document.getElementById('fk-dialog');
+    const fkdForm = document.getElementById('fk-dialog-form');
+    const fkdTitle = document.getElementById('fkd-title');
+    const fkdCurrent = document.getElementById('fkd-current');
+    const fkdToTable = document.getElementById('fkd-to-table');
+    const fkdToCol = document.getElementById('fkd-to-col');
+    const fkdOnDelete = document.getElementById('fkd-ondelete');
+    const fkdRemove = document.getElementById('fkd-remove');
+    const fkdSubmit = document.getElementById('fkd-submit');
+    const fkdCancel = document.getElementById('fkd-cancel');
+
+    let fkDialogTarget = null; // { tableId, colId } of the source field
+
+    function fillFkTargetCols(toTableId, preferredColId) {
+      const t = schema.tables.find(x => x.id === toTableId);
+      UI.fillColumns(fkdToCol, t);
+      const fallback = (t?.primaryKey || [])[0];
+      const pick = [preferredColId, fallback].find(id => id && t?.columns.some(c => c.id === id));
+      if (pick) fkdToCol.value = pick;
+    }
+
+    function openFkDialog(tableId, fieldId) {
+      const t = schema.tables.find(x => x.id === tableId);
+      const c = t?.columns.find(x => x.id === fieldId);
+      if (!t || !c) return;
+      fkDialogTarget = { tableId, colId: c.id };
+      const existing = (schema.foreignKeys || []).find(fk =>
+        fk.from.table === t.id && fk.from.columns.includes(c.id)
+      );
+
+      fkdTitle.textContent = `Foreign key from ${t.name}.${c.name}`;
+      UI.fillTables(fkdToTable, schema);
+      if (existing) {
+        const toTbl = schema.tables.find(x => x.id === existing.to.table);
+        const toCol = toTbl?.columns.find(x => x.id === existing.to.columns[0]);
+        fkdCurrent.textContent = `Currently → ${toTbl && toCol ? `${toTbl.name}.${toCol.name}` : '(unknown)'}`;
+        fkdToTable.value = existing.to.table;
+        fillFkTargetCols(existing.to.table, existing.to.columns[0]);
+        fkdOnDelete.value = existing.onDelete || 'NO ACTION';
+      } else {
+        const other = schema.tables.find(x => x.id !== t.id) || t;
+        fkdToTable.value = other.id;
+        fillFkTargetCols(other.id);
+        fkdOnDelete.value = 'NO ACTION';
+      }
+      fkdCurrent.hidden = !existing;
+      fkdRemove.hidden = !existing;
+      fkdSubmit.textContent = existing ? 'Save FK' : 'Add FK';
+      fkDialog.showModal();
+    }
+
+    fkdToTable.addEventListener('change', () => fillFkTargetCols(fkdToTable.value));
+
+    fkdForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!fkDialogTarget || !fkdToTable.value || !fkdToCol.value) return;
+      const { tableId, colId: fromColId } = fkDialogTarget;
+      fkDialog.close();
+      setForeignKeyForField(tableId, fromColId, fkdToTable.value, fkdToCol.value, fkdOnDelete.value || 'NO ACTION');
+    });
+    fkdRemove.addEventListener('click', () => {
+      if (!fkDialogTarget) return;
+      const { tableId, colId: fromColId } = fkDialogTarget;
+      fkDialog.close();
+      removeForeignKeyForField(tableId, fromColId);
+    });
+    wireDialogClose(fkDialog, fkdCancel, () => { fkDialogTarget = null; });
+
+    // --- On-canvas controls (rendered by diagram.js)
+    Diagram.setActions({
+      onAddField: (tableId) => openFieldDialog(tableId),
+      onEditField: (tableId, cId) => openFieldDialog(tableId, cId),
+      onForeignKey: (tableId, cId) => openFkDialog(tableId, cId),
+      onDeleteField: (tableId, cId) => {
+        if (confirm('Delete this field? This also removes related constraints/keys.')) deleteColumn(tableId, cId);
+      },
+      onEditTable: (tableId) => openTableDialog(tableId),
+      onDeleteTable: (tableId) => {
+        if (confirm('Delete this table? This will also remove related foreign keys.')) deleteTable(tableId);
+      },
+      onColorTable: (tableId, color) => setTableColor(tableId, color)
+    });
 
     // --- Initialize Help Modal
     (async function initHelpModal() {
       try {
-        const helpContent = await fetch('./help-content.html').then(r => r.text());
+        const helpContent = await fetch('./help-content.html', { cache: 'no-store' }).then(r => r.text());
         HelpModal.init({
           triggerSelector: '#btn-help',
           content: helpContent,
@@ -466,9 +442,7 @@
 
       function handleThemeChange() {
         // Re-render the diagram when theme changes to update table colors
-        if (schema) {
-          Diagram.renderSchema(svg, schema, selectedTableId, selectTable, selectColumn, selectedColId);
-        }
+        if (schema) render();
       }
 
       // Listen for theme changes
@@ -505,7 +479,7 @@
         save();
 
         // Render & interactions
-        Diagram.renderSchema(svg, schema, selectedTableId, selectTable, selectColumn, selectedColId);
+        render();
         // Pass selection callbacks into dragging so renders keep handlers
         Diagram.enableDragging(svg, schema, save, () => selectedTableId, () => selectedColId, selectTable, selectColumn);
         Diagram.enablePanZoom(svg, () => { /* persist view? not necessary */ });
@@ -513,10 +487,8 @@
         // Setup theme change detection
         setupThemeChangeListener();
 
-        // Pre-populate FK target selects
-        UI.fillTables(fkToTable, schema);
         const first = schema.tables[0];
-        if (first) { selectTable(first.id); } else { sectionSelected.hidden = true; }
+        if (first) selectTable(first.id);
       } catch (e) {
         console.error(e); setStatus('Failed to load schema.');
       }

@@ -13,12 +13,27 @@ jobs:
         with:
           fetch-depth: 0  # ensures tags/metadata are present
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.1'
+          cache: 'npm'
+
+      - name: Install all dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Install production dependencies only
+        run: |
+          npm ci --production
 
       # Create a clean tarball with a top-level folder "designer/"
       - name: Build tarball
         run: |
-          mkdir -p out/designer
-          cp -r server.py app.js diagram.js help-content.html help-modal.js index.html io.js style.css ui.js out/designer/
+          mkdir -p out/designer node_modules
+          cp -r dist package.json server.js node_modules out/designer/
           tar -czf designer.tar.gz -C out designer
 
       # Upload as the stable-named asset
