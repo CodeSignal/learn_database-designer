@@ -280,8 +280,21 @@
     font-weight: 600;
   }
 
-  /* Selected field row */
+  /* Field rows (the whole row is the click / keyboard target) */
+  .col-row { cursor: pointer; }
+  .col-row-hit { fill: transparent; }
   .col-row-selected { fill: rgba(14, 165, 233, 0.12); }
+
+  /* Keyboard focus on diagram controls: drawn with SVG strokes instead of the browser outline */
+  #diagram [tabindex]:focus { outline: none; }
+  .table-select:focus-visible .table-header-bg { stroke: var(--accent); stroke-width: 2.5; }
+  .col-row:focus-visible .col-row-hit { stroke: var(--accent); stroke-width: 2; }
+  .icon-btn:focus-visible .icon-btn-bg, .icon-btn:focus-visible .icon-glyph { stroke: var(--accent); }
+  .icon-btn:focus-visible .icon-btn-bg { stroke-width: 2.5; }
+  .icon-btn.danger:focus-visible .icon-btn-bg, .icon-btn.danger:focus-visible .icon-glyph { stroke: var(--danger); }
+  .add-field-btn:focus-visible .add-field-bg { stroke: var(--accent); stroke-width: 2; stroke-dasharray: none; }
+  .add-field-btn:focus-visible .add-field-text { fill: var(--accent); }
+  .color-swatch:focus-visible { stroke: var(--fg); stroke-width: 3; }
 
   /* Small icon buttons drawn in the SVG (edit / delete) */
   .icon-btn { cursor: pointer; }
@@ -355,6 +368,7 @@
 .field-dialog .dialog-actions { justify-content: flex-end; margin-top: 1rem; }
 .field-dialog .dialog-actions button { margin-top: 0; }
 .field-dialog .dialog-note { margin: 0 0 .25rem 0; font-size: .9rem; color: var(--muted); }
+.field-dialog [hidden] { display: none; }
 .color-choices { border: none; padding: 0; margin: .8rem 0 0 0; display: flex; justify-content: space-between; gap: .25rem; }
 .color-choices legend { padding: 0; margin-bottom: .4rem; }
 .color-choice { flex-direction: row; align-items: center; gap: .35rem; margin: 0; cursor: pointer; }

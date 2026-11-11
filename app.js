@@ -199,34 +199,41 @@
       save(); selectTable(tableId);
     }
 
-    // replace the field's outgoing FK (if any) with a new one, keeping the field selected
-    function setForeignKeyForField(fromTableId, fromColId, toTableId, toColId, onDelete) {
-      schema.foreignKeys = (schema.foreignKeys || []).filter(fk =>
-        !(fk.from.table === fromTableId && fk.from.columns.includes(fromColId))
-      );
-      schema.foreignKeys.push({
-        id: fkId(),
-        from: { table: fromTableId, columns: [fromColId] },
-        to: { table: toTableId, columns: [toColId] },
-        onDelete, onUpdate: 'NO ACTION'
-      });
+    // a field can have several outgoing FKs (schemas saved by the old sidebar could); every operation
+    // below touches exactly one FK, by id, so the others are kept
+    function outgoingForeignKeys(tableId, colId) {
+      return (schema.foreignKeys || []).filter(fk => fk.from.table === tableId && fk.from.columns.includes(colId));
+    }
+
+    function isSameForeignKey(fk, fromTableId, fromColId, toTableId, toColId) {
+      return fk.from.table === fromTableId && fk.from.columns.length === 1 && fk.from.columns[0] === fromColId &&
+        fk.to.table === toTableId && fk.to.columns.length === 1 && fk.to.columns[0] === toColId;
+    }
+
+    // add a new FK from a field (editFkId = null), or update one existing FK in place.
+    // Multi-column FKs keep their columns; only onDelete changes.
+    function saveForeignKey(editFkId, fromTableId, fromColId, toTableId, toColId, onDelete) {
+      const existing = editFkId ? schema.foreignKeys.find(fk => fk.id === editFkId) : null;
+      if (existing) {
+        existing.onDelete = onDelete;
+        if (existing.from.columns.length === 1) existing.to = { table: toTableId, columns: [toColId] };
+      } else {
+        schema.foreignKeys.push({
+          id: fkId(),
+          from: { table: fromTableId, columns: [fromColId] },
+          to: { table: toTableId, columns: [toColId] },
+          onDelete, onUpdate: 'NO ACTION'
+        });
+      }
       save(); setStatus('Foreign key saved');
       selectColumn(fromTableId, fromColId);
     }
 
-    // remove outgoing FK(s) from a specific field
-    function removeForeignKeyForField(fromTableId, fromColId) {
-      if (!schema?.foreignKeys) return;
+    function removeForeignKey(id, fromTableId, fromColId) {
       const before = schema.foreignKeys.length;
-      schema.foreignKeys = schema.foreignKeys.filter(fk =>
-        !(fk.from.table === fromTableId && fk.from.columns.includes(fromColId))
-      );
-      const removed = before - schema.foreignKeys.length;
-      if (removed > 0) {
-        save();
-        setStatus(`Removed ${removed} foreign key${removed > 1 ? 's' : ''} from field`);
-      } else {
-        setStatus('No foreign key to remove for this field');
+      schema.foreignKeys = schema.foreignKeys.filter(fk => fk.id !== id);
+      if (schema.foreignKeys.length < before) {
+        save(); setStatus('Foreign key removed');
       }
       selectColumn(fromTableId, fromColId);
     }
@@ -272,8 +279,13 @@
       e.preventDefault();
       const color = tdForm.querySelector('input[name="td-color"]:checked')?.value || 'white';
       const editId = tableDialogTarget;
+      const clean = tdName.value.trim();
+      if (!clean) {
+        tdName.setCustomValidity('Enter a table name');
+        tdName.reportValidity();
+        return;
+      }
       if (editId) {
-        const clean = tdName.value.trim();
         if (schema.tables.some(x => x.id !== editId && x.name === clean)) {
           tdName.setCustomValidity('A table with this name already exists');
           tdName.reportValidity();
@@ -283,7 +295,7 @@
         updateTable(editId, { name: clean, color });
       } else {
         tableDialog.close();
-        addTable(tdName.value, color);
+        addTable(clean, color);
       }
     });
     wireDialogClose(tableDialog, document.getElementById('td-cancel'), () => { tableDialogTarget = null; });
@@ -311,6 +323,7 @@
       fdTitle.textContent = c ? `Edit “${c.name}” in ${t.name}` : `Add field to ${t.name}`;
       fdSubmit.textContent = c ? 'Save Field' : 'Add Field';
       fdName.value = c?.name ?? '';
+      fdName.setCustomValidity('');
       fdType.value = c && UI.TYPES.includes(c.type) ? c.type : UI.TYPES[0];
       fdNullable.checked = !!c?.nullable;
       fdDefault.value = c?.default ?? '';
@@ -320,12 +333,19 @@
       fdName.focus();
     }
 
+    fdName.addEventListener('input', () => fdName.setCustomValidity(''));
     fdForm.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!fieldDialogTarget) return;
+      const name = fdName.value.trim();
+      if (!name) {
+        fdName.setCustomValidity('Enter a field name');
+        fdName.reportValidity();
+        return;
+      }
       const { tableId, colId: editColId } = fieldDialogTarget;
       const data = {
-        name: fdName.value,
+        name,
         type: fdType.value,
         nullable: fdNullable.checked,
         def: (fdDefault.value || '').trim() || null,
@@ -338,11 +358,13 @@
     });
     wireDialogClose(fieldDialog, fdCancel, () => { fieldDialogTarget = null; });
 
-    // --- Foreign key pop-up (set/change/remove the selected field's FK)
+    // --- Foreign key pop-up (add, change or remove one of the selected field's FKs)
     const fkDialog = document.getElementById('fk-dialog');
     const fkdForm = document.getElementById('fk-dialog-form');
     const fkdTitle = document.getElementById('fkd-title');
     const fkdCurrent = document.getElementById('fkd-current');
+    const fkdKeyWrap = document.getElementById('fkd-key-wrap');
+    const fkdKey = document.getElementById('fkd-key');
     const fkdToTable = document.getElementById('fkd-to-table');
     const fkdToCol = document.getElementById('fkd-to-col');
     const fkdOnDelete = document.getElementById('fkd-ondelete');
@@ -360,50 +382,89 @@
       if (pick) fkdToCol.value = pick;
     }
 
+    function describeFk(fk) {
+      const colName = (tbl, id) => tbl?.columns.find(c => c.id === id)?.name ?? '?';
+      const fromTbl = schema.tables.find(x => x.id === fk.from.table);
+      const toTbl = schema.tables.find(x => x.id === fk.to.table);
+      const toName = toTbl?.name ?? '(unknown)';
+      if (fk.from.columns.length === 1) return `→ ${toName}.${colName(toTbl, fk.to.columns[0])}`;
+      const list = (tbl, ids) => ids.map(id => colName(tbl, id)).join(', ');
+      return `(${list(fromTbl, fk.from.columns)}) → ${toName}(${list(toTbl, fk.to.columns)})`;
+    }
+
+    // fill the form from the key chosen in the "Key" select ('' = a new key)
+    function loadFkIntoForm() {
+      const { tableId, colId } = fkDialogTarget;
+      const fk = fkdKey.value ? schema.foreignKeys.find(x => x.id === fkdKey.value) : null;
+      const composite = !!fk && fk.from.columns.length > 1;
+      const count = outgoingForeignKeys(tableId, colId).length;
+      const notes = [];
+      if (count > 1) notes.push(`This field has ${count} foreign keys. Changes apply only to the selected key; the others are kept.`);
+      if (composite) notes.push('This is a multi-column key, so only On Delete can be changed here.');
+      fkdCurrent.textContent = notes.join(' ');
+      fkdCurrent.hidden = notes.length === 0;
+      fkdToCol.setCustomValidity('');
+
+      if (fk) {
+        fkdToTable.value = fk.to.table;
+        const idx = Math.max(0, fk.from.columns.indexOf(colId));
+        fillFkTargetCols(fk.to.table, fk.to.columns[idx]);
+        fkdOnDelete.value = fk.onDelete || 'NO ACTION';
+      } else {
+        const other = schema.tables.find(x => x.id !== tableId) || schema.tables.find(x => x.id === tableId);
+        fkdToTable.value = other.id;
+        fillFkTargetCols(other.id);
+        fkdOnDelete.value = 'NO ACTION';
+      }
+      fkdToTable.disabled = fkdToCol.disabled = composite;
+      fkdRemove.hidden = !fk;
+      fkdSubmit.textContent = fk ? 'Save FK' : 'Add FK';
+    }
+
     function openFkDialog(tableId, fieldId) {
       const t = schema.tables.find(x => x.id === tableId);
       const c = t?.columns.find(x => x.id === fieldId);
       if (!t || !c) return;
       fkDialogTarget = { tableId, colId: c.id };
-      const existing = (schema.foreignKeys || []).find(fk =>
-        fk.from.table === t.id && fk.from.columns.includes(c.id)
-      );
+      const outgoing = outgoingForeignKeys(t.id, c.id);
 
       fkdTitle.textContent = `Foreign key from ${t.name}.${c.name}`;
       UI.fillTables(fkdToTable, schema);
-      if (existing) {
-        const toTbl = schema.tables.find(x => x.id === existing.to.table);
-        const toCol = toTbl?.columns.find(x => x.id === existing.to.columns[0]);
-        fkdCurrent.textContent = `Currently → ${toTbl && toCol ? `${toTbl.name}.${toCol.name}` : '(unknown)'}`;
-        fkdToTable.value = existing.to.table;
-        fillFkTargetCols(existing.to.table, existing.to.columns[0]);
-        fkdOnDelete.value = existing.onDelete || 'NO ACTION';
-      } else {
-        const other = schema.tables.find(x => x.id !== t.id) || t;
-        fkdToTable.value = other.id;
-        fillFkTargetCols(other.id);
-        fkdOnDelete.value = 'NO ACTION';
-      }
-      fkdCurrent.hidden = !existing;
-      fkdRemove.hidden = !existing;
-      fkdSubmit.textContent = existing ? 'Save FK' : 'Add FK';
+      fkdKey.innerHTML = '';
+      outgoing.forEach(fk => fkdKey.add(new Option(describeFk(fk), fk.id)));
+      fkdKey.add(new Option('+ New foreign key', ''));
+      fkdKey.value = outgoing[0]?.id ?? '';
+      fkdKeyWrap.hidden = outgoing.length === 0;
+      loadFkIntoForm();
       fkDialog.showModal();
     }
 
-    fkdToTable.addEventListener('change', () => fillFkTargetCols(fkdToTable.value));
+    fkdKey.addEventListener('change', loadFkIntoForm);
+    fkdToTable.addEventListener('change', () => { fkdToCol.setCustomValidity(''); fillFkTargetCols(fkdToTable.value); });
+    fkdToCol.addEventListener('change', () => fkdToCol.setCustomValidity(''));
 
     fkdForm.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!fkDialogTarget || !fkdToTable.value || !fkdToCol.value) return;
       const { tableId, colId: fromColId } = fkDialogTarget;
+      const editFkId = fkdKey.value || null;
+      const editing = editFkId ? schema.foreignKeys.find(fk => fk.id === editFkId) : null;
+      const toTableId = fkdToTable.value, toColId = fkdToCol.value;
+      const retargets = !editing || editing.from.columns.length === 1;
+      if (retargets && schema.foreignKeys.some(fk => fk !== editing && isSameForeignKey(fk, tableId, fromColId, toTableId, toColId))) {
+        fkdToCol.setCustomValidity('This field already has a foreign key to this column');
+        fkdToCol.reportValidity();
+        return;
+      }
       fkDialog.close();
-      setForeignKeyForField(tableId, fromColId, fkdToTable.value, fkdToCol.value, fkdOnDelete.value || 'NO ACTION');
+      saveForeignKey(editFkId, tableId, fromColId, toTableId, toColId, fkdOnDelete.value || 'NO ACTION');
     });
     fkdRemove.addEventListener('click', () => {
-      if (!fkDialogTarget) return;
+      if (!fkDialogTarget || !fkdKey.value) return;
       const { tableId, colId: fromColId } = fkDialogTarget;
+      const id = fkdKey.value;
       fkDialog.close();
-      removeForeignKeyForField(tableId, fromColId);
+      removeForeignKey(id, tableId, fromColId);
     });
     wireDialogClose(fkDialog, fkdCancel, () => { fkDialogTarget = null; });
 

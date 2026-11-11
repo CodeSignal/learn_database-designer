@@ -89,14 +89,30 @@ function columnCenterY(table, colId) {
   return base + idx * DIAGRAM.ROW_H;
 }
 
-function iconButton({ x, y, size = 18, icon, title, className = '', onClick }) {
-  const btn = createSvg('g', { class: `icon-btn ${className}`.trim(), transform: `translate(${x},${y})`, role: 'button' });
+/* Turn an SVG element into a keyboard-operable button. `focusKey` must be stable across
+   re-renders: renderSchema uses it to put focus back on the redrawn element. */
+function makeButton(el, { label, focusKey, onActivate, pressed }) {
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('aria-label', label);
+  el.setAttribute('data-focus', focusKey);
+  if (pressed !== undefined) el.setAttribute('aria-pressed', String(!!pressed));
+  el.addEventListener('click', (e) => { e.stopPropagation(); onActivate && onActivate(); });
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault(); e.stopPropagation();
+    if (!e.repeat && onActivate) onActivate();
+  });
+  return el;
+}
+
+function iconButton({ x, y, size = 18, icon, title, focusKey, className = '', onClick }) {
+  const btn = createSvg('g', { class: `icon-btn ${className}`.trim(), transform: `translate(${x},${y})` });
   const tip = createSvg('title'); tip.textContent = title; btn.appendChild(tip);
   btn.appendChild(createSvg('rect', { width: size, height: size, rx: 4, ry: 4, class: 'icon-btn-bg' }));
   const off = (size - 12) / 2;
   btn.appendChild(createSvg('path', { d: ICON_PATHS[icon], transform: `translate(${off},${off})`, class: 'icon-glyph' }));
-  btn.addEventListener('click', (e) => { e.stopPropagation(); onClick && onClick(); });
-  return btn;
+  return makeButton(btn, { label: title, focusKey, onActivate: onClick });
 }
 
 /* Floating toolbar above the selected table: color swatches + edit + delete */
@@ -118,20 +134,25 @@ function renderTableToolbar(svg, table) {
     const sw = createSvg('circle', {
       cx: x + pad + r + i * step, cy: ty + h / 2, r,
       fill: getHeaderFill({ color: key }),
-      class: `color-swatch${key === current ? ' active' : ''}`, role: 'button'
+      class: `color-swatch${key === current ? ' active' : ''}`
     });
     const tip = createSvg('title'); tip.textContent = `Color: ${key}`; sw.appendChild(tip);
-    sw.addEventListener('click', (e) => { e.stopPropagation(); ACTIONS.onColorTable && ACTIONS.onColorTable(table.id, key); });
+    makeButton(sw, {
+      label: `Color: ${key}`, focusKey: `swatch:${table.id}:${key}`, pressed: key === current,
+      onActivate: () => ACTIONS.onColorTable && ACTIONS.onColorTable(table.id, key)
+    });
     bar.appendChild(sw);
   });
 
   bar.appendChild(createSvg('line', { x1: swatchesEnd + 7, y1: ty + 6, x2: swatchesEnd + 7, y2: ty + h - 6, class: 'toolbar-sep' }));
   bar.appendChild(iconButton({
     x: editX, y: ty + (h - btnSize) / 2, size: btnSize, icon: 'edit', title: 'Edit table',
+    focusKey: `edit-table:${table.id}`,
     onClick: () => ACTIONS.onEditTable && ACTIONS.onEditTable(table.id)
   }));
   bar.appendChild(iconButton({
     x: delX, y: ty + (h - btnSize) / 2, size: btnSize, icon: 'trash', className: 'danger', title: 'Delete table',
+    focusKey: `delete-table:${table.id}`,
     onClick: () => ACTIONS.onDeleteTable && ACTIONS.onDeleteTable(table.id)
   }));
 
@@ -140,7 +161,8 @@ function renderTableToolbar(svg, table) {
 
 function renderTable(svg, table, schema, selectedTableId, selectedColId, onSelectTable, onSelectColumn) {
   const vp = ensureViewport(svg);
-  const g = createSvg('g', { class: `table${table.id === selectedTableId ? ' selected' : ''}`, 'data-id': table.id });
+  const isTableSelected = table.id === selectedTableId;
+  const g = createSvg('g', { class: `table${isTableSelected ? ' selected' : ''}`, 'data-id': table.id, role: 'group', 'aria-label': `Table ${table.name}` });
   const { x, y, width, height } = tableGeometry(table);
 
   // MAIN BOX (selection only)
@@ -148,15 +170,18 @@ function renderTable(svg, table, schema, selectedTableId, selectedColId, onSelec
   const rect = createSvg('rect', { x, y, rx: cornerR, ry: cornerR, width, height, fill: '#fff', stroke: '#ccc', class: 'table-box' });
   g.appendChild(rect);
 
-  // HEADER BACKGROUND (only header changes color, with rounded top corners)
+  // HEADER (only header changes color, with rounded top corners) — the keyboard target for selecting the table
+  const headerBtn = createSvg('g', { class: 'table-select' });
   const headerFill = getHeaderFill(table);
   const headerPath = roundedTopRectPath(x, y, width, DIAGRAM.HEADER_H, cornerR, cornerR);
-  const header = createSvg('path', { d: headerPath, fill: headerFill, class: 'table-header-bg' });
-  g.appendChild(header);
-
-  // TITLE
+  headerBtn.appendChild(createSvg('path', { d: headerPath, fill: headerFill, class: 'table-header-bg' }));
   const title = createSvg('text', { x: x + DIAGRAM.PADDING_X, y: y + DIAGRAM.HEADER_H / 2, class: 'table-title', 'dominant-baseline': 'middle' });
-  title.textContent = table.name; g.appendChild(title);
+  title.textContent = table.name; headerBtn.appendChild(title);
+  makeButton(headerBtn, {
+    label: `Select table ${table.name}`, focusKey: `table:${table.id}`, pressed: isTableSelected,
+    onActivate: () => onSelectTable && onSelectTable(table.id)
+  });
+  g.appendChild(headerBtn);
 
   // HEADER SEPARATOR
   g.appendChild(createSvg('line', { x1: x, y1: y + DIAGRAM.HEADER_H, x2: x + width, y2: y + DIAGRAM.HEADER_H, stroke: '#d1d5db', 'stroke-width': '0.5' }));
@@ -166,7 +191,7 @@ function renderTable(svg, table, schema, selectedTableId, selectedColId, onSelec
   const hx = x + width - DIAGRAM.PADDING_X - btnSize;
   const hy = y + (DIAGRAM.HEADER_H - btnSize) / 2;
 
-  const dragBtn = createSvg('g', { class: 'drag-button drag-handle', transform: `translate(${hx},${hy})`, role: 'button' });
+  const dragBtn = createSvg('g', { class: 'drag-button drag-handle', transform: `translate(${hx},${hy})`, 'aria-hidden': 'true' });
   dragBtn.appendChild(createSvg('rect', { width: btnSize, height: btnSize, rx: 4, ry: 4, class: 'drag-btn-bg' }));
   [[4, 5], [8, 5], [12, 5], [4, 10], [8, 10], [12, 10]].forEach(([cx, cy]) => {
     dragBtn.appendChild(createSvg('circle', { cx, cy, r: 1.3, class: 'drag-btn-dot' }));
@@ -184,33 +209,40 @@ function renderTable(svg, table, schema, selectedTableId, selectedColId, onSelec
     );
     const prefix = `${isPK ? '🔑 ' : ''}${isFK ? '🔗 ' : ''}`;
     const isSelected = col.id === selectedColId;
-    if (isSelected) {
-      g.appendChild(createSvg('rect', { x: x + 1, y: cy - DIAGRAM.ROW_H / 2, width: width - 2, height: DIAGRAM.ROW_H, class: 'col-row-selected' }));
-    }
+    const desc = `${col.name}: ${col.type}${col.nullable ? '' : ' NOT NULL'}`;
+    const row = createSvg('g', { class: 'col-row' });
+    row.appendChild(createSvg('rect', {
+      x: x + 1, y: cy - DIAGRAM.ROW_H / 2, width: width - 2, height: DIAGRAM.ROW_H,
+      class: `col-row-hit${isSelected ? ' col-row-selected' : ''}`
+    }));
     const classes = ['col-text'];
     if (isSelected) classes.push('col-editing');
     const t = createSvg('text', { x: x + DIAGRAM.PADDING_X, y: cy, class: classes.join(' '), 'data-col-id': col.id, 'dominant-baseline': 'middle' });
-    t.textContent = `${prefix}${col.name}: ${col.type}${col.nullable ? '' : ' NOT NULL'}`;
-    t.style.cursor = 'pointer';
-    t.addEventListener('click', (e) => {
-      e.stopPropagation();
-      onSelectColumn && onSelectColumn(table.id, col.id);
+    t.textContent = `${prefix}${desc}`;
+    row.appendChild(t);
+    makeButton(row, {
+      label: `Select field ${desc}${isPK ? ', primary key' : ''}${isFK ? ', foreign key' : ''}`,
+      focusKey: `col:${table.id}:${col.id}`, pressed: isSelected,
+      onActivate: () => onSelectColumn && onSelectColumn(table.id, col.id)
     });
-    g.appendChild(t);
+    g.appendChild(row);
 
     if (isSelected) {
       const size = 18, iy = cy - size / 2;
       const delX = x + width - DIAGRAM.PADDING_X - size;
       g.appendChild(iconButton({
         x: delX - 2 * (size + 4), y: iy, size, icon: 'link', title: 'Foreign key',
+        focusKey: `fk:${table.id}:${col.id}`,
         onClick: () => ACTIONS.onForeignKey && ACTIONS.onForeignKey(table.id, col.id)
       }));
       g.appendChild(iconButton({
         x: delX - size - 4, y: iy, size, icon: 'edit', title: 'Edit field',
+        focusKey: `edit-field:${table.id}:${col.id}`,
         onClick: () => ACTIONS.onEditField && ACTIONS.onEditField(table.id, col.id)
       }));
       g.appendChild(iconButton({
         x: delX, y: iy, size, icon: 'trash', className: 'danger', title: 'Delete field',
+        focusKey: `delete-field:${table.id}:${col.id}`,
         onClick: () => ACTIONS.onDeleteField && ACTIONS.onDeleteField(table.id, col.id)
       }));
     }
@@ -218,14 +250,14 @@ function renderTable(svg, table, schema, selectedTableId, selectedColId, onSelec
 
   // ADD FIELD ROW (opens the field pop-up)
   const addY = y + DIAGRAM.HEADER_H + DIAGRAM.GAP + table.columns.length * DIAGRAM.ROW_H;
-  const addBtn = createSvg('g', { class: 'add-field-btn', role: 'button' });
+  const addBtn = createSvg('g', { class: 'add-field-btn' });
   addBtn.appendChild(createSvg('rect', { x: x + DIAGRAM.PADDING_X / 2, y: addY + 2, width: width - DIAGRAM.PADDING_X, height: DIAGRAM.ADD_ROW_H - 4, rx: 4, ry: 4, class: 'add-field-bg' }));
   const addText = createSvg('text', { x: x + DIAGRAM.PADDING_X, y: addY + DIAGRAM.ADD_ROW_H / 2, class: 'add-field-text', 'dominant-baseline': 'middle' });
   addText.textContent = '+ Add field';
   addBtn.appendChild(addText);
-  addBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    ACTIONS.onAddField && ACTIONS.onAddField(table.id);
+  makeButton(addBtn, {
+    label: `Add field to ${table.name}`, focusKey: `add-field:${table.id}`,
+    onActivate: () => ACTIONS.onAddField && ACTIONS.onAddField(table.id)
   });
   g.appendChild(addBtn);
 
@@ -249,7 +281,7 @@ function ensureArrowMarker(svg) {
    the same side on both, so the curve loops around the tables instead of cutting through them. */
 function edgeSides(fromTable, toTable) {
   const W = DIAGRAM.NODE_WIDTH, minGap = 30;
-  const fx = fromTable.position?.x || 0, tx = toTable.position?.x || 0;
+  const fx = tableGeometry(fromTable).x, tx = tableGeometry(toTable).x;
   if (fromTable !== toTable) {
     if (tx >= fx + W + minGap) return { from: 'right', to: 'left' };
     if (tx + W + minGap <= fx) return { from: 'left', to: 'right' };
@@ -261,7 +293,7 @@ function edgeSides(fromTable, toTable) {
 function edgePath(fromTable, fromColId, toTable, toColId) {
   const W = DIAGRAM.NODE_WIDTH;
   const sides = edgeSides(fromTable, toTable);
-  const sideX = (table, side) => (table.position?.x || 0) + (side === 'right' ? W : 0);
+  const sideX = (table, side) => tableGeometry(table).x + (side === 'right' ? W : 0);
   const sx = sideX(fromTable, sides.from), sy = columnCenterY(fromTable, fromColId);
   const ex = sideX(toTable, sides.to), ey = columnCenterY(toTable, toColId);
 
@@ -289,11 +321,23 @@ function renderEdge(svg, fk, schema) {
 }
 
 function renderSchema(svg, schema, selectedTableId, onSelectTable, onSelectColumn, selectedColId) {
+  const active = document.activeElement;
+  const focusKey = active && svg.contains(active) ? active.getAttribute('data-focus') : null;
+
   clearDiagram(svg); ensureArrowMarker(svg); applyView(svg);
-  schema.tables.forEach(t => renderTable(svg, t, schema, selectedTableId, selectedColId, onSelectTable, onSelectColumn));
-  (schema.foreignKeys || []).forEach(fk => renderEdge(svg, fk, schema));
   const selected = schema.tables.find(t => t.id === selectedTableId);
-  if (selected) renderTableToolbar(svg, selected);
+  schema.tables.forEach(t => { if (t !== selected) renderTable(svg, t, schema, selectedTableId, selectedColId, onSelectTable, onSelectColumn); });
+  (schema.foreignKeys || []).forEach(fk => renderEdge(svg, fk, schema));
+  // selected table and its toolbar go last: drawn on top, and next in Tab order after the table's own controls
+  if (selected) {
+    renderTable(svg, selected, schema, selectedTableId, selectedColId, onSelectTable, onSelectColumn);
+    renderTableToolbar(svg, selected);
+  }
+
+  if (focusKey) {
+    const target = [...svg.querySelectorAll('[data-focus]')].find(el => el.getAttribute('data-focus') === focusKey);
+    if (target) target.focus({ preventScroll: true });
+  }
 }
 
 /* --- pan/zoom on the background --- */
@@ -359,7 +403,7 @@ function enableDragging(svg, schema, onChange, getSelectedId, getSelectedColId, 
     const group = target.closest('g.table'); if (!group) return;
     const tableId = group.getAttribute('data-id'); const table = schema.tables.find(t => t.id === tableId); if (!table) return;
 
-    const { x: sx, y: sy } = clientToSvgPoint(svg, e.clientX, e.clientY); const { x, y } = table.position || { x: 0, y: 0 };
+    const { x: sx, y: sy } = clientToSvgPoint(svg, e.clientX, e.clientY); const { x, y } = tableGeometry(table);
     drag.active = true; drag.id = tableId; drag.offsetX = sx - x; drag.offsetY = sy - y; drag.pointerId = e.pointerId; svg.setPointerCapture(e.pointerId);
 
     e.stopPropagation();
